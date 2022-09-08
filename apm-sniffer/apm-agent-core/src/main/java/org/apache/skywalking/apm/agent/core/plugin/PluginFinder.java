@@ -89,6 +89,7 @@ public class PluginFinder {
     }
 
     public ElementMatcher<? super TypeDescription> buildMatch() {
+        // 建立匹配规则，在内部类中添加第一个规则，对比对应设置的名字是否相同
         ElementMatcher.Junction judge = new AbstractJunction<NamedElement>() {
             @Override
             public boolean matches(NamedElement target) {
@@ -96,7 +97,9 @@ public class PluginFinder {
             }
         };
         judge = judge.and(not(isInterface()));
+        // 有一些插件会设置一些特殊的规则，比如带有某个注解什么的
         for (AbstractClassEnhancePluginDefine define : signatureMatchDefine) {
+            // 去获取插件自定义的特殊匹配规则
             ClassMatch match = define.enhanceClass();
             if (match instanceof IndirectMatch) {
                 judge = judge.or(((IndirectMatch) match).buildJunction());

@@ -66,6 +66,7 @@ public class SkyWalkingAgent {
     public static void premain(String agentArgs, Instrumentation instrumentation) throws PluginException {
         final PluginFinder pluginFinder;
         try {
+            // 1、初始化配置，并明确插在所在路径
             SnifferConfigInitializer.initializeCoreConfig(agentArgs);
         } catch (Exception e) {
             // try to resolve a new logger, and use the new logger to write the error log here
@@ -78,6 +79,7 @@ public class SkyWalkingAgent {
         }
 
         try {
+            // 2、加载插件
             pluginFinder = new PluginFinder(new PluginBootstrap().loadPlugins());
         } catch (AgentPackageNotFoundException ape) {
             LOGGER.error(ape, "Locate agent.jar failure. Shutting down.");
@@ -87,8 +89,10 @@ public class SkyWalkingAgent {
             return;
         }
 
+        // 基于配置存储被代理的增强类到debug目录
         final ByteBuddy byteBuddy = new ByteBuddy().with(TypeValidation.of(Config.Agent.IS_OPEN_DEBUGGING_CLASS));
 
+        // 使用ByteBuddy创建AgentBuilder 定制化agent行为
         AgentBuilder agentBuilder = new AgentBuilder.Default(byteBuddy).ignore(
                 nameStartsWith("net.bytebuddy.")
                         .or(nameStartsWith("org.slf4j."))
@@ -100,6 +104,7 @@ public class SkyWalkingAgent {
                         .or(allSkyWalkingAgentExcludeToolkit())
                         .or(ElementMatchers.isSynthetic()));
 
+        // JDK9 兼容
         JDK9ModuleExporter.EdgeClasses edgeClasses = new JDK9ModuleExporter.EdgeClasses();
         try {
             agentBuilder = BootstrapInstrumentBoost.inject(pluginFinder, instrumentation, agentBuilder, edgeClasses);
@@ -134,11 +139,13 @@ public class SkyWalkingAgent {
         PluginFinder.pluginInitCompleted();
 
         try {
+            // 4、启动服务
             ServiceManager.INSTANCE.boot();
         } catch (Exception e) {
             LOGGER.error(e, "Skywalking agent boot failure.");
         }
 
+        // 5、注册关闭钩子
         Runtime.getRuntime()
                 .addShutdownHook(new Thread(ServiceManager.INSTANCE::shutdown, "skywalking service shutdown thread"));
     }

@@ -63,11 +63,14 @@ public class SnifferConfigInitializer {
      * At the end, `agent.service_name` and `collector.servers` must not be blank.
      */
     public static void initializeCoreConfig(String agentOptions) {
+        // 加载配置信息 优先级 agent参数 > 系统环境变量 > /config/agent.config
         AGENT_SETTINGS = new Properties();
         try (final InputStreamReader configFileStream = loadConfig()) {
+            // agent参数
             AGENT_SETTINGS.load(configFileStream);
             for (String key : AGENT_SETTINGS.stringPropertyNames()) {
                 String value = (String) AGENT_SETTINGS.get(key);
+                // 配置值里的占位符替换
                 AGENT_SETTINGS.put(key, PropertyPlaceholderHelper.INSTANCE.replacePlaceholders(value, AGENT_SETTINGS));
             }
 
@@ -76,11 +79,13 @@ public class SnifferConfigInitializer {
         }
 
         try {
+            // 系统环境变量
             overrideConfigBySystemProp();
         } catch (Exception e) {
             LOGGER.error(e, "Failed to read the system properties.");
         }
 
+        // agent参数
         agentOptions = StringUtil.trim(agentOptions, ',');
         if (!StringUtil.isEmpty(agentOptions)) {
             try {
@@ -93,11 +98,14 @@ public class SnifferConfigInitializer {
             }
         }
 
+        // 1、将配置信息映射到config类里
         initializeConfig(Config.class);
         // reconfigure logger after config initialization
+        // 2、根据配置信息重新制定日志解析器
         configureLogger();
         LOGGER = LogManager.getLogger(SnifferConfigInitializer.class);
 
+        // 3、检查agent名称和后端地址是否配置
         if (StringUtil.isEmpty(Config.Agent.SERVICE_NAME)) {
             throw new ExceptionInInitializerError("`agent.service_name` is missing.");
         } else {
@@ -121,6 +129,7 @@ public class SnifferConfigInitializer {
             Config.Plugin.PEER_MAX_LENGTH = 200;
         }
 
+        // 标记配置加载完成
         IS_INIT_COMPLETED = true;
     }
 

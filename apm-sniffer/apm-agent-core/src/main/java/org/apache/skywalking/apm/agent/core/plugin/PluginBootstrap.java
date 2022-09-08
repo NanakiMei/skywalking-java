@@ -41,7 +41,10 @@ public class PluginBootstrap {
     public List<AbstractClassEnhancePluginDefine> loadPlugins() throws AgentPackageNotFoundException {
         AgentClassLoader.initDefaultLoader();
 
+        // 生成一个类加载器
         PluginResourcesResolver resolver = new PluginResourcesResolver();
+        // 去指定的路径下搜索文件 skywalking-plugin.def
+        // 指定的路径 默认是 biz_agent.jar 同目录的 activations 和 plugins 文件夹
         List<URL> resources = resolver.getResources();
 
         if (resources == null || resources.size() == 0) {
@@ -49,6 +52,7 @@ public class PluginBootstrap {
             return new ArrayList<AbstractClassEnhancePluginDefine>();
         }
 
+        // 去加载了 skywalking-plugin.def 并且解析该文件
         for (URL pluginUrl : resources) {
             try {
                 PluginCfg.INSTANCE.load(pluginUrl.openStream());
@@ -57,9 +61,11 @@ public class PluginBootstrap {
             }
         }
 
+        // skywalking-plugin.def 文件里指定的插件的类 给集中保存到容器
         List<PluginDefine> pluginClassList = PluginCfg.INSTANCE.getPluginClassList();
 
         List<AbstractClassEnhancePluginDefine> plugins = new ArrayList<AbstractClassEnhancePluginDefine>();
+        // 把上面的 pluginClassList 中插件的类 全部给实例化
         for (PluginDefine pluginDefine : pluginClassList) {
             try {
                 LOGGER.debug("loading plugin class {}.", pluginDefine.getDefineClass());
